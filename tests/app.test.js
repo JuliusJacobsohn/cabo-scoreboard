@@ -26,7 +26,7 @@ function app(storage = {}){
       this.click('#btnStart');
     },
     card(value){ this.click(`#numberPad button[data-value="${value}"]`); },
-    caller(index){ this.el('#callerSelect').value = String(index); this.el('#callerSelect').dispatchEvent(new window.Event('change')); },
+    caller(index){ this.click(`#callerButtons button[data-caller="${index}"]`); },
     round(hands, caller){
       for(let i = 0; i < hands.length; i++){
         this.window.document.querySelectorAll('.playerButton')[i].click();
@@ -116,4 +116,21 @@ test('manual finish ignores unfinished round; reopening restores editable result
   assert.equal(a.game().rounds.length, 1); assert.equal(a.game().closed, true);
   a.click('#btnUndo'); assert.equal(a.game().closed, false);
   assert.deepEqual(a.game().draft.entries[0].cards, [2]); a.window.close();
+});
+
+test('caller buttons select in one tap; backspace invalidates OK and can be undone', () => {
+  const a = app(); a.start(); a.card(2); a.card(9); a.click('#btnConfirm');
+  a.caller(1);
+  assert.equal(a.game().draft.caller, 1);
+  assert.equal(a.el('#callerButtons button[data-caller="1"]').getAttribute('aria-pressed'), 'true');
+  const undoCount = a.game().draftUndo.length;
+  a.caller(1); assert.equal(a.game().draftUndo.length, undoCount);
+  a.window.document.querySelectorAll('.playerButton')[0].click();
+  a.click('#numberPad .backspace');
+  assert.deepEqual(a.game().draft.entries[0].cards, [2]);
+  assert.equal(a.game().draft.entries[0].confirmed, false);
+  a.click('#btnUndoInput');
+  assert.deepEqual(a.game().draft.entries[0].cards, [2, 9]);
+  assert.equal(a.game().draft.entries[0].confirmed, true);
+  a.window.close();
 });

@@ -4,9 +4,9 @@ Mobile scoreboard for Cabo, following the HTML/CSS/JavaScript structure and dark
 
 ### Features
 - Choose 2–5 players; tap recent player names to reuse them.
-- Compact player selector, number pad (0–13), card sum and per-player **OK** confirmation.
+- Direct player buttons, a balanced five-column number pad (0–13 plus backspace), card sum and per-player **OK** confirmation. OK automatically advances to the next unconfirmed player.
 - Tap a card to remove it. **Undo input** restores card edits, confirmations and caller changes, including after reloading.
-- Select who called Cabo; preview the round points before committing.
+- Tap a name once to select who called Cabo; preview the round points before committing.
 - Reopen the last completed round, even after a finished game or a reload, to correct cards or the caller. Totals and reset eligibility are recalculated.
 - Open and finished games, local persistence, round history and locally bundled Chart.js score progression.
 - No backend, external fonts or runtime CDN dependencies. All site asset URLs are relative, including under a GitHub Pages repository path.
@@ -36,7 +36,7 @@ Open `index.html` directly or serve the directory with any static server. The te
 After changing `app.js`, `scoring.js` or `style.css`, run `npm run version-assets` and commit the refreshed cache keys in `index.html`.
 
 ### GitHub Pages
-Validated locally on 2026-10-10: all 18 Node/jsdom tests and static checks passed. Chrome at 360 × 640 with five players: the player picker, number pad, confirmation, caller and round completion fit within the first screen (634px with the complete scoring preview). Input undo, failed caller +5, round completion, round undo and persistence were exercised in the browser. Deployment has not yet been verified on GitHub.
+Validated locally on 2026-10-10: all 19 Node/jsdom tests and static checks passed. Chrome at 360 × 640 with five players: the direct player and caller buttons, five-column number pad, confirmation and round completion fit within the first screen (622px for the current entry view). Input undo, failed caller +5, round completion, round undo and persistence were exercised in the browser. Deployment has not yet been verified on GitHub.
 
 1. Create a public repository named `cabo-scoreboard` with default branch **master**.
 2. Push this project's files to it.

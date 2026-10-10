@@ -132,6 +132,7 @@
       el.title = `${name}: ${result.totals[index]} Punkte${entry.cards.length ? ` · Karten ${entry.cards.join(', ')}` : ''}`;
       el.append(label, total, detail); $('#scoreList').append(el);
     });
+    $('#scoreList').style.setProperty('--player-count', game.players.length);
     $('#entryTitle').textContent = `${game.players[selected]} · Karten eingeben`;
     const entry = game.draft.entries[selected];
     $('#cardValues').replaceChildren();
@@ -145,12 +146,28 @@
       const el = button(String(value), () => { rememberDraft(game); entry.cards.push(value); entry.confirmed = false; save(); render(); });
       el.disabled = entry.cards.length >= 4; el.dataset.value = value; $('#numberPad').append(el);
     }
+    const backspace = button('⌫', () => {
+      if(!entry.cards.length) return;
+      rememberDraft(game); entry.cards.pop(); entry.confirmed = false; save(); render();
+    }, 'backspace');
+    backspace.disabled = !entry.cards.length;
+    backspace.setAttribute('aria-label', 'Letzte Karte entfernen');
+    $('#numberPad').append(backspace);
     $('#cardSum').textContent = entry.cards.reduce((sum, value) => sum + value, 0);
     $('#btnConfirm').disabled = !entry.cards.length || entry.confirmed;
     $('#btnConfirm').textContent = entry.confirmed ? '✓ OK' : 'OK';
-    $('#callerSelect').replaceChildren(new Option('Bitte auswählen', ''));
-    game.players.forEach((name, index) => $('#callerSelect').add(new Option(name, String(index))));
-    $('#callerSelect').value = game.draft.caller === null ? '' : String(game.draft.caller);
+    $('#callerButtons').replaceChildren();
+    $('#callerButtons').style.setProperty('--player-count', game.players.length);
+    game.players.forEach((name, index) => {
+      const el = button(name, () => {
+        if(game.closed || game.draft.caller === index) return;
+        rememberDraft(game); game.draft.caller = index; save(); render();
+      }, game.draft.caller === index ? 'active' : '');
+      el.dataset.caller = index;
+      el.setAttribute('aria-pressed', String(game.draft.caller === index));
+      el.title = name;
+      $('#callerButtons').append(el);
+    });
     $('#btnRoundDone').disabled = true;
     $('#roundPreview').textContent = 'Alle Karten mit OK bestätigen und den Cabo-Rufer auswählen.';
     if(game.draft.entries.every(item => item.confirmed) && game.draft.caller !== null){
@@ -215,11 +232,6 @@
     const next = game.draft.entries.findIndex(entry => !entry.confirmed);
     if(next >= 0) selected = next;
     save(); render();
-  });
-  $('#callerSelect').addEventListener('change', event => {
-    const game = currentGame(); if(!game || game.closed) return;
-    rememberDraft(game);
-    game.draft.caller = event.target.value === '' ? null : Number(event.target.value); save(); render();
   });
   $('#btnRoundDone').addEventListener('click', () => {
     const game = currentGame();

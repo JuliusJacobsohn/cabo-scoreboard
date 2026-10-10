@@ -7,7 +7,7 @@
   <meta name="description" content="Mobiles Cabo Scoreboard mit Karten-Eingabe, automatischer Wertung und lokal gespeichertem Spielverlauf." />
   <title>Cabo Mobile Punkte</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=83e06ae49478" />
+  <link rel="stylesheet" href="style.css?v=d1e84c481e9b" />
 </head>
 <body>
   <main class="wrap">
@@ -36,7 +36,7 @@
             <div id="numberPad" class="numbers" aria-label="Kartenwerte von 0 bis 13"></div>
             <div class="row between entryFooter"><span class="mono">Kartensumme: <b id="cardSum">0</b></span><button id="btnConfirm" class="btnAccent">OK</button></div>
           </div>
-          <div class="callerField"><label for="callerSelect">Wer hat „Cabo!“ gesagt?</label><select id="callerSelect"><option value="">Bitte auswählen</option></select></div>
+          <fieldset class="callerField"><legend>Wer hat „Cabo!“ gesagt?</legend><div id="callerButtons" class="callerButtons" aria-label="Cabo-Rufer"></div></fieldset>
           <div id="roundPreview" class="small" aria-live="polite"></div>
           <button id="btnRoundDone" class="btnAccent">Runde abschließen</button>
         </div>
@@ -55,6 +55,6 @@
   </main>
   <script src="vendor/chart.umd-4.4.3.js"></script>
   <script src="scoring.js?v=6b666366c191"></script>
-  <script src="app.js?v=a6ce4c6828d9"></script>
+  <script src="app.js?v=960dcb683a8a"></script>
 </body>
 </html>
