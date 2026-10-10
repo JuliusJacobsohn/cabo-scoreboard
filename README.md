@@ -1,5 +1,7 @@
 ## Cabo Scoreboard
 
+[Open scoreboard](https://juliusjacobsohn.github.io/cabo-scoreboard/) · [Deployment status](https://github.com/JuliusJacobsohn/cabo-scoreboard/actions/workflows/pages.yml)
+
 Mobile scoreboard for Cabo, following the HTML/CSS/JavaScript structure and dark/yellow visual style of [Skull King Scoreboard](https://github.com/JuliusJacobsohn/skull-king-scoreboard).
 
 ### Features
@@ -36,7 +38,7 @@ Open `index.html` directly or serve the directory with any static server. The te
 After changing `app.js`, `scoring.js` or `style.css`, run `npm run version-assets` and commit the refreshed cache keys in `index.html`.
 
 ### GitHub Pages
-Validated locally on 2026-10-10: all 19 Node/jsdom tests and static checks passed. Chrome at 360 × 640 with five players: the direct player and caller buttons, five-column number pad, confirmation and round completion fit within the first screen (622px for the current entry view). Input undo, failed caller +5, round completion, round undo and persistence were exercised in the browser. Deployment has not yet been verified on GitHub.
+Validated locally on 2026-10-10: all 19 Node/jsdom tests and static checks passed. Chrome at 360 × 640 with five players: the direct player and caller buttons, five-column number pad, confirmation and round completion fit within the first screen (622px for the current entry view). Input undo, failed caller +5, round completion, round undo and persistence were exercised in the browser. GitHub Pages is configured to deploy through the included Actions workflow.
 
 1. Create a public repository named `cabo-scoreboard` with default branch **master**.
 2. Push this project's files to it.
