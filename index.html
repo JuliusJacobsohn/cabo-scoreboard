@@ -7,7 +7,7 @@
   <meta name="description" content="Mobiles Cabo Scoreboard mit Karten-Eingabe, automatischer Wertung und lokal gespeichertem Spielverlauf." />
   <title>Cabo Mobile Punkte</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=d1e84c481e9b" />
+  <link rel="stylesheet" href="style.css?v=0d4ef81c6ead" />
 </head>
 <body>
   <main class="wrap">
@@ -22,11 +22,12 @@
         <div id="chips" class="chips" aria-label="Ausgewählte Spieler"></div>
         <button id="btnStart" class="btnAccent">Spiel starten</button>
       </div>
+      <div class="row setupActions"><button id="btnSetupHistory">Spielarchiv</button><button id="btnSetupStats">Spielerstatistik</button></div>
       <div><h2>Beendete Spiele</h2><div id="closedGamesList" class="gameList"></div></div>
     </section>
     <section id="gameScreen" class="hidden">
       <div class="card">
-        <div class="toolbarRow"><div class="row between"><span class="pill">Runde <b id="roundLabel">1</b></span><div class="row"><button id="btnUndoInput">↶ Eingabe</button><button id="btnUndo">↶ Runde</button></div></div><div class="row"><button id="btnMainMenu">Hauptmenü</button><button id="btnHistory">Verlauf</button><button id="btnEndGame" class="btnDanger">Spiel beenden</button></div></div>
+        <div class="toolbarRow"><div class="row between"><span class="pill">Runde <b id="roundLabel">1</b></span><div class="row"><button id="btnUndoInput">↶ Eingabe</button><button id="btnUndo">↶ Runde</button></div></div><div class="row"><button id="btnMainMenu">Hauptmenü</button><button id="btnHistory">Graph &amp; Verlauf</button><button id="btnEndGame" class="btnDanger">Spiel beenden</button></div></div>
         <div id="finishBanner" class="hidden" role="status"></div>
         <div id="scoreList" class="scoreList" aria-label="Spieler und Punktestand"></div>
         <div id="roundEntry">
@@ -42,8 +43,7 @@
         </div>
         <div id="error" role="alert"></div>
       </div>
-      <section id="graphPanel" class="card hidden"><h2>Punkteverlauf</h2><div class="graphWrap"><canvas id="gameGraphCanvas" role="img" aria-label="Punkteverlauf; genaue Werte im Spielverlauf darunter"></canvas></div></section>
-      <section id="historyPanel" class="card hidden"><h2>Spielverlauf</h2><p class="small">Zellen zeigen Rundenpunkte → Gesamtpunkte. Weniger ist besser.</p><div class="histWrap"><table><thead id="histHead"></thead><tbody id="histBody"></tbody></table></div></section>
+      <section id="graphPanel" class="card"><h2>Punkteverlauf</h2><p class="small">Ab Runde 0 · Weniger Punkte sind besser.</p><div class="graphWrap"><canvas id="gameGraphCanvas" role="img" aria-label="Punkteverlauf; genaue Werte unter Graph und Verlauf"></canvas></div></section>
     </section>
     <details class="card"><summary>Wertung &amp; Regeln</summary>
       <p>Die niedrigste Kartensumme gewinnt die Runde und erhält 0 Punkte. Alle anderen erhalten ihre Kartensumme. Der Cabo-Rufer erhält zusätzlich 5 Punkte, wenn seine Summe höher als die niedrigste ist.</p>
@@ -52,9 +52,42 @@
       <p>Diese App verwendet die <a href="https://www.cabogame.com/how-to-play" target="_blank" rel="noopener noreferrer">Regeln auf cabogame.com mit 5-Punkte-Strafe</a>. Andere Editionen können bei Strafe, Rundensieg und Spielende abweichen.</p>
       <p class="small">Inoffizielle Punktehilfe. Ohne Konto oder Backend. Browserdaten löschen entfernt gespeicherte Spiele.</p>
     </details>
+    <footer class="small"><a href="https://github.com/JuliusJacobsohn/cabo-scoreboard" target="_blank" rel="noopener noreferrer">GitHub-Repository</a> · <a href="https://juliusjacobsohn.github.io/skull-king-scoreboard/" target="_blank" rel="noopener noreferrer">Skull King Scoreboard</a></footer>
   </main>
+  <dialog id="analyticsDialog" class="analyticsDialog" aria-labelledby="analyticsTitle">
+    <div class="analyticsLayout">
+      <div class="analyticsHead row between"><h2 id="analyticsTitle">Graph &amp; Verlauf</h2><button id="btnCloseAnalytics" autofocus>Schließen</button></div>
+      <div id="analyticsTabs" class="analyticsTabs" role="tablist" aria-label="Auswertungen">
+        <button id="btnViewGraph" data-view="graph" role="tab" aria-controls="modalGraphPanel">Graph</button>
+        <button id="btnViewHistory" data-view="history" role="tab" aria-controls="historyPanel">Runden</button>
+        <button id="btnViewGames" data-view="games" role="tab" aria-controls="archivePanel">Spiele</button>
+        <button id="btnViewStats" data-view="stats" role="tab" aria-controls="statisticsPanel">Statistik</button>
+      </div>
+      <div class="analyticsBody">
+        <section id="modalGraphPanel" class="analyticsPanel hidden" role="tabpanel" aria-labelledby="btnViewGraph"><p class="small">Runde → Gesamtpunkte · Weniger ist besser.</p><div class="graphWrap"><canvas id="historyGraphCanvas" role="img" aria-label="Punkteverlauf der ausgewählten Partie"></canvas></div></section>
+        <section id="historyPanel" class="analyticsPanel hidden" role="tabpanel" aria-labelledby="btnViewHistory"><p class="small">Rundenpunkte → Gesamtpunkte. Weniger ist besser.</p><div class="histWrap"><table><thead id="histHead"></thead><tbody id="histBody"></tbody></table></div></section>
+        <section id="archivePanel" class="analyticsPanel hidden" role="tabpanel" aria-labelledby="btnViewGames"><p class="small">Beendete Spiele. Öffne eine Partie für ihren Graphen und die Rundenwerte.</p><div id="archiveGamesList" class="gameList"></div></section>
+        <section id="statisticsPanel" class="analyticsPanel hidden" role="tabpanel" aria-labelledby="btnViewStats">
+          <p id="statsEmpty" class="small">Noch keine beendeten Spiele. Nach der ersten Partie erscheinen hier die Spielerstatistiken.</p>
+          <div id="statsContent" class="hidden">
+            <p class="small">Nur beendete Spiele auf diesem Gerät. Geteilte Siege zählen für alle Gewinner; bei Punkten ist weniger besser.</p>
+            <div class="histWrap"><table><thead><tr><th scope="col">Spieler</th><th scope="col">Spiele</th><th scope="col">Siege</th><th scope="col">Niederlagen</th><th scope="col">Siege %</th><th scope="col">Ø Punkte</th><th scope="col">Ø Platz</th><th scope="col">Min.</th><th scope="col">Max.</th></tr></thead><tbody id="statsBody"></tbody></table></div>
+            <h3>Spieler im Detail</h3><div id="statsPlayerButtons" class="chips" aria-label="Statistikspieler"></div><p id="callStatsLine" class="small"></p>
+            <div class="statsCharts">
+              <section class="statsChartCard"><h3>Siege &amp; Niederlagen</h3><div class="statsChartWrap"><canvas id="statsWinLossCanvas" role="img" aria-label="Siege und Niederlagen aller Spieler"></canvas></div></section>
+              <section class="statsChartCard"><h3>Punktevergleich</h3><div class="statsChartWrap"><canvas id="statsPointsCanvas" role="img" aria-label="Niedrigste, durchschnittliche und höchste Endpunkte aller Spieler"></canvas></div></section>
+              <section class="statsChartCard"><h3>Endpunkte pro Partie</h3><div class="statsChartWrap"><canvas id="statsTrendCanvas" role="img" aria-label="Endpunkte des ausgewählten Spielers im Zeitverlauf"></canvas></div></section>
+              <section class="statsChartCard"><h3>Platzierungen</h3><div class="statsChartWrap"><canvas id="statsPositionCanvas" role="img" aria-label="Platzierungen des ausgewählten Spielers"></canvas></div></section>
+            </div>
+            <p class="small">Ø Rundenpunkte enthalten Cabo-Strafen; der 100→50-Reset betrifft nur den Gesamtstand.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </dialog>
   <script src="vendor/chart.umd-4.4.3.js"></script>
   <script src="scoring.js?v=6b666366c191"></script>
-  <script src="app.js?v=960dcb683a8a"></script>
+  <script src="statistics.js?v=2d87eacfea39"></script>
+  <script src="app.js?v=fb4873f2f584"></script>
 </body>
 </html>

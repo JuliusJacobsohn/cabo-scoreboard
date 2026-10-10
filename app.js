@@ -2,10 +2,15 @@
   const KEY = 'cabo_mobile_v1';
   const $ = selector => document.querySelector(selector);
   const { scoreRound, replayGame } = CaboScoring;
+  const { summarizeGames } = CaboStatistics;
   const COLORS = ['#f4c542', '#7dd3fc', '#34d399', '#fb7185', '#c4b5fd'];
   let state = { version: 1, players: [], games: [], activeId: null };
   let selected = 0;
   let chart = null;
+  let analyticsCharts = [];
+  let analyticsContext = 'history';
+  let analyticsView = 'graph';
+  let statsPlayer = '';
   let storageBlocked = false;
 
   function notify(message){
@@ -73,6 +78,7 @@
     $('#error').textContent = '';
     if(game) renderGame(game);
     else renderSetup();
+    if($('#analyticsDialog').open) renderAnalytics();
   }
 
   function addPlayer(name){
@@ -209,12 +215,127 @@
 
   function renderGraph(game, result){
     if(chart) chart.destroy();
-    if(typeof Chart === 'undefined' || $('#graphPanel').classList.contains('hidden')) return;
-    chart = new Chart($('#gameGraphCanvas'), {
+    chart = createScoreGraph('gameGraphCanvas', game, result);
+  }
+
+  function chartOptions(){
+    return {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: { legend: { labels: { color: '#e7eef9' } } },
+      scales: {
+        x: { ticks: { color: '#9fb0c7' }, grid: { color: '#ffffff12' } },
+        y: { beginAtZero: true, ticks: { color: '#9fb0c7', precision: 0 }, grid: { color: '#ffffff12' } }
+      }
+    };
+  }
+
+  function createScoreGraph(canvas, game, result){
+    if(typeof Chart === 'undefined') return null;
+    const options = chartOptions();
+    options.scales.x.title = { display: true, text: 'Runde', color: '#9fb0c7' };
+    options.scales.x.ticks.precision = 0;
+    return new Chart($('#' + canvas), {
       type: 'line',
       data: { labels: Array.from({ length: game.rounds.length + 1 }, (_, index) => index), datasets: game.players.map((name, index) => ({ label: name, data: [0, ...result.history.map(entries => entries[index].total)], borderColor: COLORS[index], backgroundColor: COLORS[index], tension: 0, pointRadius: 3 })) },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#e7eef9' } } }, scales: { x: { title: { display: true, text: 'Runde', color: '#9fb0c7' }, ticks: { color: '#9fb0c7', precision: 0 }, grid: { color: '#ffffff12' } }, y: { beginAtZero: true, ticks: { color: '#9fb0c7', precision: 0 }, grid: { color: '#ffffff12' } } } }
+      options
     });
+  }
+
+  function destroyAnalyticsCharts(){
+    analyticsCharts.forEach(item => item?.destroy()); analyticsCharts = [];
+  }
+
+  function openAnalytics(context, view){
+    analyticsContext = context; analyticsView = view;
+    const dialog = $('#analyticsDialog');
+    if(!dialog.open){
+      if(typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.setAttribute('open', '');
+    }
+    document.body.classList.add('modalOpen'); renderAnalytics();
+  }
+
+  function closeAnalytics(){
+    const dialog = $('#analyticsDialog');
+    if(typeof dialog.close === 'function') dialog.close();
+    else dialog.removeAttribute('open');
+    document.body.classList.remove('modalOpen'); destroyAnalyticsCharts();
+  }
+
+  function renderAnalytics(){
+    destroyAnalyticsCharts();
+    $('#analyticsTitle').textContent = analyticsContext === 'history' ? 'Graph & Verlauf' : 'Spielarchiv & Statistik';
+    const views = analyticsContext === 'history' ? ['graph', 'history'] : ['games', 'stats'];
+    document.querySelectorAll('#analyticsTabs button').forEach(tab => {
+      const active = tab.dataset.view === analyticsView;
+      tab.classList.toggle('hidden', !views.includes(tab.dataset.view));
+      tab.classList.toggle('active', active); tab.setAttribute('aria-selected', String(active)); tab.tabIndex = active ? 0 : -1;
+    });
+    for(const [view, panel] of Object.entries({ graph: 'modalGraphPanel', history: 'historyPanel', games: 'archivePanel', stats: 'statisticsPanel' })){
+      $('#' + panel).classList.toggle('hidden', view !== analyticsView);
+    }
+    if(analyticsContext === 'history'){
+      const game = currentGame(); if(!game) return;
+      const result = replayGame(game.players, game.rounds);
+      if(analyticsView === 'graph') analyticsCharts.push(createScoreGraph('historyGraphCanvas', game, result));
+      else renderHistory(game, result);
+    }else if(analyticsView === 'stats') renderStatistics();
+    else{
+      const list = $('#archiveGamesList'); list.replaceChildren();
+      const games = state.games.filter(game => game.closed).slice().reverse();
+      if(!games.length) list.textContent = 'Noch keine beendeten Spiele.';
+      games.forEach(game => {
+        const result = replayGame(game.players, game.rounds);
+        const el = button(game.players.join(' · '), () => {
+          state.activeId = game.id; selected = 0; closeAnalytics(); save(); render(); openAnalytics('history', 'graph');
+        });
+        const info = document.createElement('span'); info.className = 'small';
+        info.textContent = `${game.rounds.length} Runden · Gewonnen: ${result.winners.map(index => game.players[index]).join(', ')} · Graph öffnen`;
+        el.append(info); list.append(el);
+      });
+    }
+  }
+
+  function renderStatistics(){
+    const stats = summarizeGames(state.games);
+    $('#statsEmpty').classList.toggle('hidden', !!stats.length);
+    $('#statsContent').classList.toggle('hidden', !stats.length);
+    $('#statsBody').replaceChildren(); $('#statsPlayerButtons').replaceChildren();
+    if(!stats.length) return;
+    const selectedStat = stats.find(stat => stat.key === statsPlayer) || stats[0]; statsPlayer = selectedStat.key;
+    const format = number => number.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+    stats.forEach(stat => {
+      const row = document.createElement('tr');
+      for(const [index, value] of [stat.name, stat.gamesPlayed, stat.wins, stat.losses, format(stat.winRate) + '%', format(stat.avgPoints), format(stat.avgRank), stat.minPoints, stat.maxPoints].entries()){
+        const cell = document.createElement(index === 0 ? 'th' : 'td'); cell.textContent = value;
+        if(index === 0) cell.scope = 'row'; row.append(cell);
+      }
+      $('#statsBody').append(row);
+      const el = button(stat.name, () => { statsPlayer = stat.key; renderAnalytics(); }, stat.key === statsPlayer ? 'btnAccent' : '');
+      el.setAttribute('aria-pressed', String(stat.key === statsPlayer)); $('#statsPlayerButtons').append(el);
+    });
+    $('#callStatsLine').textContent = `${selectedStat.name}: ${selectedStat.roundsPlayed} Runden · Ø ${format(selectedStat.avgRoundPoints)} Rundenpunkte · ${selectedStat.calls} Cabo-Rufe, davon ${selectedStat.failedCalls} mit +5 · ${selectedStat.moons} Kamikaze · ${selectedStat.resets} Resets`;
+    if(typeof Chart === 'undefined') return;
+    const labels = stats.map(stat => stat.name);
+    const addChart = (canvas, type, data, options = chartOptions()) => analyticsCharts.push(new Chart($('#' + canvas), { type, data, options }));
+    addChart('statsWinLossCanvas', 'bar', { labels, datasets: [
+      { label: 'Siege', data: stats.map(stat => stat.wins), backgroundColor: '#34d399' },
+      { label: 'Niederlagen', data: stats.map(stat => stat.losses), backgroundColor: '#fb7185' }
+    ] });
+    addChart('statsPointsCanvas', 'bar', { labels, datasets: [
+      { label: 'Min.', data: stats.map(stat => stat.minPoints), backgroundColor: '#7dd3fc' },
+      { label: 'Ø Punkte', data: stats.map(stat => stat.avgPoints), backgroundColor: '#f4c542' },
+      { label: 'Max.', data: stats.map(stat => stat.maxPoints), backgroundColor: '#fb7185' }
+    ] });
+    addChart('statsTrendCanvas', 'line', {
+      labels: selectedStat.scoreHistory.map((_, index) => `Partie ${index + 1}`),
+      datasets: [{ label: selectedStat.name, data: selectedStat.scoreHistory.map(entry => entry.score), borderColor: '#f4c542', backgroundColor: '#f4c542', tension: 0, pointRadius: 4 }]
+    });
+    const positions = Object.entries(selectedStat.positionCounts).sort(([a], [b]) => Number(a) - Number(b));
+    addChart('statsPositionCanvas', 'doughnut', {
+      labels: positions.map(([rank]) => `Platz ${rank}`),
+      datasets: [{ data: positions.map(([, count]) => count), backgroundColor: COLORS, borderColor: '#0b0f14' }]
+    }, { responsive: true, maintainAspectRatio: false, animation: false, plugins: chartOptions().plugins });
   }
 
   $('#playerForm').addEventListener('submit', event => { event.preventDefault(); addPlayer($('#playerName').value); });
@@ -253,7 +374,22 @@
     const game = currentGame(); if(!game || game.closed || !game.draftUndo?.length) return;
     const previous = game.draftUndo.pop(); game.draft = previous.draft; selected = previous.selected; save(); render();
   });
-  $('#btnHistory').addEventListener('click', () => { $('#historyPanel').classList.toggle('hidden'); $('#graphPanel').classList.toggle('hidden'); const game = currentGame(); if(game) renderGraph(game, replayGame(game.players, game.rounds)); });
+  $('#btnHistory').addEventListener('click', () => openAnalytics('history', 'graph'));
+  $('#btnSetupHistory').addEventListener('click', () => openAnalytics('archive', 'games'));
+  $('#btnSetupStats').addEventListener('click', () => openAnalytics('archive', 'stats'));
+  $('#btnCloseAnalytics').addEventListener('click', closeAnalytics);
+  $('#analyticsDialog').addEventListener('close', () => { document.body.classList.remove('modalOpen'); destroyAnalyticsCharts(); });
+  document.querySelectorAll('#analyticsTabs button').forEach(tab => {
+    tab.addEventListener('click', () => { analyticsView = tab.dataset.view; renderAnalytics(); $('.analyticsBody').scrollTop = 0; });
+    tab.addEventListener('keydown', event => {
+      if(!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const tabs = [...document.querySelectorAll('#analyticsTabs button')].filter(item => !item.classList.contains('hidden'));
+      const index = tabs.indexOf(tab);
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+      tabs[next].click(); tabs[next].focus();
+    });
+  });
   $('#btnEndGame').addEventListener('click', () => {
     const game = currentGame(); if(!game || game.closed || !game.rounds.length) return;
     if(!confirm('Spiel mit den abgeschlossenen Runden beenden? Die aktuelle Eingabe wird nicht gewertet.')) return;

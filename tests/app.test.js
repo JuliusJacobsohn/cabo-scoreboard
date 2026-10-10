@@ -6,13 +6,15 @@ const { JSDOM } = require('jsdom');
 const root = path.join(__dirname, '..');
 const KEY = 'cabo_mobile_v1';
 
-function app(storage = {}){
+function app(storage = {}, chartClass){
   const dom = new JSDOM(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), { url: 'https://example.test/cabo-scoreboard/', runScripts: 'outside-only' });
   const { window } = dom;
   window.structuredClone = structuredClone;
   window.confirm = () => true;
+  if(chartClass) window.Chart = chartClass;
   for(const [key, value] of Object.entries(storage)) window.localStorage.setItem(key, value);
   window.eval(fs.readFileSync(path.join(root, 'scoring.js'), 'utf8'));
+  window.eval(fs.readFileSync(path.join(root, 'statistics.js'), 'utf8'));
   window.eval(fs.readFileSync(path.join(root, 'app.js'), 'utf8'));
   return {
     window,
@@ -100,9 +102,10 @@ test('five-player selection is compact; name markup remains text', () => {
   const a = app(); a.start(['<img src=x>', 'B', 'C', 'D', 'E']);
   assert.equal(a.window.document.querySelectorAll('.playerButton').length, 5);
   assert.equal(a.window.document.querySelectorAll('#scoreList img').length, 0);
-  assert.equal(a.el('#graphPanel').classList.contains('hidden'), true);
+  assert.equal(a.el('#graphPanel').classList.contains('hidden'), false);
   assert.equal(a.el('#historyPanel').classList.contains('hidden'), true);
-  a.click('#btnHistory'); assert.equal(a.el('#historyPanel').classList.contains('hidden'), false);
+  a.click('#btnHistory'); assert.equal(a.el('#modalGraphPanel').classList.contains('hidden'), false);
+  a.click('#btnViewHistory'); assert.equal(a.el('#historyPanel').classList.contains('hidden'), false);
   a.window.close();
 });
 test('malformed storage is preserved without silent overwrite', () => {
@@ -132,5 +135,40 @@ test('caller buttons select in one tap; backspace invalidates OK and can be undo
   a.click('#btnUndoInput');
   assert.deepEqual(a.game().draft.entries[0].cards, [2, 9]);
   assert.equal(a.game().draft.entries[0].confirmed, true);
+  a.window.close();
+});
+
+test('game and history graphs start at round zero; archive statistics use finished games', () => {
+  const charts = [];
+  class ChartSpy {
+    constructor(canvas, config){ this.canvas = canvas.id; this.config = config; charts.push(this); }
+    destroy(){ this.destroyed = true; }
+  }
+  const a = app({}, ChartSpy); a.start();
+  assert.deepEqual(Array.from(charts.at(-1).config.data.datasets[0].data), [0]);
+  a.round([[1], [8]], 1);
+  assert.deepEqual(Array.from(charts.at(-1).config.data.datasets[1].data), [0, 13]);
+  a.click('#btnHistory');
+  assert.equal(a.el('#analyticsDialog').open, true);
+  assert.equal(a.el('#btnViewGraph').getAttribute('aria-selected'), 'true');
+  assert.equal(charts.at(-1).canvas, 'historyGraphCanvas');
+  const modalChart = charts.at(-1);
+  a.click('#btnViewHistory'); assert.equal(modalChart.destroyed, true);
+  a.click('#btnCloseAnalytics'); assert.equal(a.el('#analyticsDialog').open, false);
+  a.click('#btnMainMenu'); a.click('#btnSetupStats');
+  assert.equal(a.el('#statsContent').classList.contains('hidden'), true);
+  a.click('#btnCloseAnalytics'); a.click('#openGamesList button');
+  a.click('#btnEndGame'); a.click('#btnMainMenu'); a.click('#btnSetupStats');
+  assert.equal(a.el('#statsContent').classList.contains('hidden'), false);
+  assert.equal(a.window.document.querySelectorAll('#statsBody tr').length, 2);
+  assert.match(a.el('#callStatsLine').textContent, /Ada/);
+  assert.deepEqual(charts.slice(-4).map(item => item.canvas), ['statsWinLossCanvas', 'statsPointsCanvas', 'statsTrendCanvas', 'statsPositionCanvas']);
+  a.click('#statsPlayerButtons button:last-child'); assert.match(a.el('#callStatsLine').textContent, /Ben.*1 Cabo-Rufe, davon 1 mit \+5/);
+  const statsCharts = charts.slice(-4);
+  a.click('#btnViewGames'); assert.ok(statsCharts.every(item => item.destroyed));
+  a.click('#archiveGamesList button');
+  assert.equal(a.el('#btnViewGraph').getAttribute('aria-selected'), 'true');
+  assert.equal(a.game().closed, true);
+  assert.equal(a.el('footer a').href, 'https://github.com/JuliusJacobsohn/cabo-scoreboard');
   a.window.close();
 });

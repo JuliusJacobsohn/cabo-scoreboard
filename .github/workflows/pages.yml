@@ -33,7 +33,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           mkdir -p _site/vendor
-          cp index.html style.css app.js scoring.js icon.svg _site/
+          cp index.html style.css app.js scoring.js statistics.js icon.svg _site/
           cp vendor/* _site/vendor/
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
