@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b0f14" />
+  <meta name="description" content="Mobiles Cabo Scoreboard mit Karten-Eingabe, automatischer Wertung und lokal gespeichertem Spielverlauf." />
+  <title>Cabo Mobile Punkte</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css?v=83e06ae49478" />
+</head>
+<body>
+  <main class="wrap">
+    <header><h1>Cabo <span class="small">Scoreboard</span></h1><p class="small">Karten merken. Punkte zählen lassen.</p></header>
+    <div id="message" class="hidden" role="status"></div>
+    <section id="setupScreen" class="card">
+      <div class="menuGames"><h2>Offene Spiele</h2><div id="openGamesList" class="gameList"></div></div>
+      <div>
+        <h2>Neues Spiel</h2><p class="small">Wähle 2–5 Spieler. Alle Punkte bleiben auf diesem Gerät gespeichert.</p>
+        <form id="playerForm" class="row"><input id="playerName" type="text" placeholder="Spielername" aria-label="Spielername" maxlength="40" autocomplete="off" required /><button class="btnAccent">Hinzufügen</button></form>
+        <div id="recentPlayers" class="chips" aria-label="Letzte Spieler"></div>
+        <div id="chips" class="chips" aria-label="Ausgewählte Spieler"></div>
+        <button id="btnStart" class="btnAccent">Spiel starten</button>
+      </div>
+      <div><h2>Beendete Spiele</h2><div id="closedGamesList" class="gameList"></div></div>
+    </section>
+    <section id="gameScreen" class="hidden">
+      <div class="card">
+        <div class="toolbarRow"><div class="row between"><span class="pill">Runde <b id="roundLabel">1</b></span><div class="row"><button id="btnUndoInput">↶ Eingabe</button><button id="btnUndo">↶ Runde</button></div></div><div class="row"><button id="btnMainMenu">Hauptmenü</button><button id="btnHistory">Verlauf</button><button id="btnEndGame" class="btnDanger">Spiel beenden</button></div></div>
+        <div id="finishBanner" class="hidden" role="status"></div>
+        <div id="scoreList" class="scoreList" aria-label="Spieler und Punktestand"></div>
+        <div id="roundEntry">
+          <div class="entryPanel">
+            <h2 id="entryTitle"></h2><p class="small">1–4 Karten · Eingetragene Karte antippen zum Entfernen.</p>
+            <div id="cardValues" class="cardValues" aria-label="Eingetragene Karten"></div>
+            <div id="numberPad" class="numbers" aria-label="Kartenwerte von 0 bis 13"></div>
+            <div class="row between entryFooter"><span class="mono">Kartensumme: <b id="cardSum">0</b></span><button id="btnConfirm" class="btnAccent">OK</button></div>
+          </div>
+          <div class="callerField"><label for="callerSelect">Wer hat „Cabo!“ gesagt?</label><select id="callerSelect"><option value="">Bitte auswählen</option></select></div>
+          <div id="roundPreview" class="small" aria-live="polite"></div>
+          <button id="btnRoundDone" class="btnAccent">Runde abschließen</button>
+        </div>
+        <div id="error" role="alert"></div>
+      </div>
+      <section id="graphPanel" class="card hidden"><h2>Punkteverlauf</h2><div class="graphWrap"><canvas id="gameGraphCanvas" role="img" aria-label="Punkteverlauf; genaue Werte im Spielverlauf darunter"></canvas></div></section>
+      <section id="historyPanel" class="card hidden"><h2>Spielverlauf</h2><p class="small">Zellen zeigen Rundenpunkte → Gesamtpunkte. Weniger ist besser.</p><div class="histWrap"><table><thead id="histHead"></thead><tbody id="histBody"></tbody></table></div></section>
+    </section>
+    <details class="card"><summary>Wertung &amp; Regeln</summary>
+      <p>Die niedrigste Kartensumme gewinnt die Runde und erhält 0 Punkte. Alle anderen erhalten ihre Kartensumme. Der Cabo-Rufer erhält zusätzlich 5 Punkte, wenn seine Summe höher als die niedrigste ist.</p>
+      <p>Bei Gleichstand auf dem niedrigsten Wert erhält nur der beteiligte Cabo-Rufer 0 Punkte. Ist er nicht beteiligt, erhalten alle mit der niedrigsten Summe 0 Punkte.</p>
+      <p>12–12–13–13: 0 Punkte für diesen Spieler, 50 für alle anderen, ohne Cabo-Strafe. Genau 100 Gesamtpunkte werden einmal pro Spieler und Partie auf 50 reduziert. Bei mehr als 100 Punkten endet das Spiel; der niedrigste Gesamtstand gewinnt.</p>
+      <p>Diese App verwendet die <a href="https://www.cabogame.com/how-to-play" target="_blank" rel="noopener noreferrer">Regeln auf cabogame.com mit 5-Punkte-Strafe</a>. Andere Editionen können bei Strafe, Rundensieg und Spielende abweichen.</p>
+      <p class="small">Inoffizielle Punktehilfe. Ohne Konto oder Backend. Browserdaten löschen entfernt gespeicherte Spiele.</p>
+    </details>
+  </main>
+  <script src="vendor/chart.umd-4.4.3.js"></script>
+  <script src="scoring.js?v=6b666366c191"></script>
+  <script src="app.js?v=a6ce4c6828d9"></script>
+</body>
+</html>

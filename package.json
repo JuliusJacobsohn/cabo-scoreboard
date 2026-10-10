@@ -1,0 +1,12 @@
+{
+  "name": "cabo-scoreboard",
+  "private": true,
+  "scripts": {
+    "version-assets": "node scripts/version-assets.js",
+    "test": "node --test tests/*.test.js",
+    "check": "node --check app.js && node --check scoring.js && node scripts/check-assets.js"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}
